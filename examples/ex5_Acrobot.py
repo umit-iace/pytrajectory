@@ -23,7 +23,7 @@ def f(x,u):
     d12 = m*(lc**2+l*lc*cos(x1))+I
     phi1 = (m*lc+m*l)*g*cos(x3)+m*lc*g*cos(x1+x3)
 
-    ff = np.array([	    x2,
+    ff = np.array([     x2,
                         u1,
                         x4,
                 -1/d11*(h1+phi1+d12*u1)

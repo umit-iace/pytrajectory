@@ -47,7 +47,13 @@ class CollocationSystem(object):
         # TODO: check order of variables of differentiation ([x,u] vs. [u,x])
         #       because in dot products in later evaluation of `DG` with vector `c`
         #       values for u come first in `c`
-        Df = sp.Matrix(f).jacobian(sys.states + sys.inputs)
+        
+        # TODO: remove this comment after reviewing the problem
+        # previously the jacobian was calculated wrt to strings which triggered strange
+        # strange sympy behavior (bug) for systems with more than 9 variables
+        # workarround: we use real symbols now
+        all_symbols = sp.symbols(sys.states + sys.inputs)
+        Df = sp.Matrix(f).jacobian(all_symbols)
         
         self._ff_vectorized = sym2num_vectorfield(f, sys.states, sys.inputs, vectorized=True, cse=True)
         self._Df_vectorized = sym2num_vectorfield(Df, sys.states, sys.inputs, vectorized=True, cse=True)

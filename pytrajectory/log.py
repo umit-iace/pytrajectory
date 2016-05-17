@@ -5,12 +5,13 @@ import os
 import logging
 
 DEBUG = False
-LOG2CONSOLE = True
+LOG2CONSOLE = False
 LOG2FILE = False
+
 
 # get logger
 logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 # log to console
 if LOG2CONSOLE:

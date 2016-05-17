@@ -206,7 +206,7 @@ With this allocation, the system of equations can be solved for :math:`\boldsymb
 remain as the free parameters of the spline function.
 
 .. note::
-   There is implemented a different approach for defining the candidate functions, see :ref:`non-standard-approach`.
+   Optionally, there is available an alternative approach for defining the candidate functions, see :ref:`non-standard-approach`.
 
 
 .. _system_structure:

@@ -11,6 +11,16 @@ from auxiliary import sym2num_vectorfield
 
 from IPython import embed as IPS
 
+class Container(object):
+    """
+    Simple data structure to store additional internal information for
+    debugging and checking the algorithms.
+    Some of the attributes might indeed be neccessary
+    """
+    def __init__(self, **kwargs):
+        for key, value in kwargs.iteritems():
+            self.__setattr__(str(key), value)
+
 
 class CollocationSystem(object):
     '''
@@ -32,6 +42,7 @@ class CollocationSystem(object):
         # set parameters
         self._parameters = dict()
         self._parameters['tol'] = kwargs.get('tol', 1e-5)
+        self._parameters['reltol'] = kwargs.get('reltol', 2e-5)
         self._parameters['sol_steps'] = kwargs.get('sol_steps', 100)
         self._parameters['method'] = kwargs.get('method', 'leven')
         self._parameters['coll_type'] = kwargs.get('coll_type', 'equidistant')
@@ -69,12 +80,6 @@ class CollocationSystem(object):
         This method is used to set up the equations for the collocation equation system
         and defines functions for the numerical evaluation of the system and its jacobian.
         '''
-
-        class Container(object):
-            def __init__(self, **kwargs):
-                for key, value in kwargs.iteritems():
-                    self.__setattr__(str(key), value)
-
         logging.debug("Building Equation System")
         
         # make symbols local
@@ -113,7 +118,7 @@ class CollocationSystem(object):
         # to get these indices we iterate over all rows and take those whose indices
         # are contained in `eqind` (modulo the number of state variables -> `x_len`)
         take_indices = np.tile(eqind, (n_cpts,)) + np.arange(n_cpts).repeat(len(eqind)) * len(states)
-        
+
         # here we determine the jacobian matrix of the derivatives of the system state functions
         # (as they depend on the free parameters in a linear fashion its just the above matrix Mdx)
         DdX = Mdx[take_indices, :]
@@ -148,7 +153,8 @@ class CollocationSystem(object):
         DdX = DdX.tocsr()
         
         # define the callable functions for the eqs
-        def G(c):
+        
+        def G(c, info=False):
             # TODO: check if both spline approaches result in same values here
             X = Mx.dot(c)[:,None] + Mx_abs
             U = Mu.dot(c)[:,None] + Mu_abs
@@ -167,8 +173,15 @@ class CollocationSystem(object):
             #dX = np.array(dX).reshape((x_len, -1), order='F').take(eqind, axis=0)
     
             G = F - dX
+            res = np.asarray(G).ravel(order='F')
 
-            return np.asarray(G).ravel(order='F')
+            # debug:
+            if info:
+                # see Container docstring for motivation
+                iC = Container(X=X, U=U, F=F, dX=dX, res=res)
+                res = iC
+
+            return res
 
         # and its jacobian
         def DG(c):
@@ -207,6 +220,10 @@ class CollocationSystem(object):
         
         # return the callable functions
         #return G, DG
+
+        # store internal information for diagnose purposes
+        C.take_indices = take_indices
+        self.C = C
         return C
 
     def _get_index_dict(self):
@@ -260,6 +277,10 @@ class CollocationSystem(object):
         free_param = np.hstack(sorted(self.trajectories.indep_coeffs.values(), key=lambda arr: arr[0].name))
         n_dof = free_param.size
         
+        # store internal information:
+        self.dbgC = Container(cpts=cpts, indic=indic, dx_fnc=dx_fnc, x_fnc=x_fnc, u_fnc=u_fnc)
+        self.dbgC.free_param=free_param
+
         lx = len(cpts) * self.sys.n_states
         lu = len(cpts) * self.sys.n_inputs
         
@@ -342,6 +363,11 @@ class CollocationSystem(object):
                         f = self._first_guess[k]
 
                         free_coeffs_guess = s.interpolate(f)
+
+                    elif self._first_guess.has_key('seed'):
+                        np.random.seed(self._first_guess.get('seed'))
+                        free_coeffs_guess = np.random.random(len(v))
+                        
                     else:
                         free_coeffs_guess = 0.1 * np.ones(len(v))
 
@@ -352,7 +378,12 @@ class CollocationSystem(object):
             # now we compute a new guess for every free coefficient of every new (finer) spline
             # by interpolating the corresponding old (coarser) spline
             for k, v in sorted(self.trajectories.indep_coeffs.items(), key = lambda (k, v): k):
-                if (self.trajectories.splines[k].type == 'x'):
+                # TODO: introduce a parameter `ku` (factor for increasing spline resolution for u)
+                # formerly its spline resolution was constant
+                # (from that period stems the following if-statement)
+                # currently the input is handled like the states
+                # thus the else branch is switched off
+                if True or (self.trajectories.splines[k].type == 'x'):
                     logging.debug("Get new guess for spline {}".format(k))
                     
                     s_new = self.trajectories.splines[k]
@@ -389,11 +420,14 @@ class CollocationSystem(object):
         logging.debug("Solving Equation System")
         
         # create our solver
-        solver = Solver(F=G, DF=DG, x0=self.guess, tol=self._parameters['tol'],
-                        maxIt=self._parameters['sol_steps'], method=self._parameters['method'])
+        self.solver = Solver(F=G, DF=DG, x0=self.guess,
+                             tol=self._parameters['tol'],
+                             reltol=self._parameters['reltol'],
+                             maxIt=self._parameters['sol_steps'],
+                             method=self._parameters['method'])
         
         # solve the equation system
-        self.sol = solver.solve()
+        self.sol = self.solver.solve()
         
         return self.sol
 

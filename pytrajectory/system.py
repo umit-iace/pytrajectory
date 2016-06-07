@@ -5,13 +5,15 @@ import sympy as sp
 from scipy import sparse
 import pickle
 import copy
+import time
 
 from trajectories import Trajectory
 from collocation import CollocationSystem
 from simulation import Simulator
 import auxiliary
 import visualisation
-from log import logging, Timer
+from log import logging
+
 
 # DEBUGGING
 from IPython import embed as IPS
@@ -51,8 +53,8 @@ class ControlSystem(object):
         ============= =============   ============================================================
         key           default value   meaning
         ============= =============   ============================================================
-        sx            5               Initial number of spline parts for the system variables
-        su            5               Initial number of spline parts for the input variables
+        sx            10               Initial number of spline parts for the system variables
+        su            10               Initial number of spline parts for the input variables
         kx            2               Factor for raising the number of spline parts
         maxIt         10              Maximum number of iteration steps
         eps           1e-2            Tolerance for the solution of the initial value problem
@@ -60,6 +62,7 @@ class ControlSystem(object):
         tol           1e-5            Tolerance for the solver of the equation system
         use_chains    True            Whether or not to use integrator chains
         sol_steps     100             Maximum number of iteration steps for the eqs solver
+        first_guess   None            to initiate free parameters (might be useful: {'seed': value})
         ============= =============   ============================================================
     '''
 
@@ -255,6 +258,8 @@ class ControlSystem(object):
             Callable function for the input variables.
         '''
 
+        T_start = time.time()
+        
         # do the first iteration step
         logging.info("1st Iteration: {} spline parts".format(self.eqs.trajectories.n_parts_x))
         self._iterate()
@@ -285,6 +290,7 @@ class ControlSystem(object):
         if self.constraints:
             self.constrain()
         
+        self.T_sol = time.time() - T_start
         # return the found solution functions
         return self.eqs.trajectories.x, self.eqs.trajectories.u
 

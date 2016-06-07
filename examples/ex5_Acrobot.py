@@ -47,8 +47,9 @@ xb = [  0.0,
 ua = [0.0]
 ub = [0.0]
 
-# create trajectory object
-S = ControlSystem(f, a=0.0, b=2.0, xa=xa, xb=xb, ua=ua, ub=ub)
+# create System
+first_guess = {'seed' : 1529} # choose a seed which leads to quick convergence
+S = ControlSystem(f, a=0.0, b=2.0, xa=xa, xb=xb, ua=ua, ub=ub, use_chains=True, first_guess=first_guess)
 
 # alter some method parameters to increase performance
 S.set_param('su', 10)

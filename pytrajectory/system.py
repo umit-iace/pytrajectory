@@ -60,6 +60,7 @@ class ControlSystem(object):
         eps           1e-2            Tolerance for the solution of the initial value problem
         ierr          1e-1            Tolerance for the error on the whole interval
         tol           1e-5            Tolerance for the solver of the equation system
+        dt_sim        1e-2            Sample time for integration (initial value problem)
         use_chains    True            Whether or not to use integrator chains
         sol_steps     100             Maximum number of iteration steps for the eqs solver
         first_guess   None            to initiate free parameters (might be useful: {'seed': value})
@@ -72,6 +73,7 @@ class ControlSystem(object):
         self._parameters['maxIt'] = kwargs.get('maxIt', 10)
         self._parameters['eps'] = kwargs.get('eps', 1e-2)
         self._parameters['ierr'] = kwargs.get('ierr', 1e-1)
+        self._parameters['dt_sim'] = kwargs.get('dt_sim', 0.01)
 
         # create an object for the dynamical system
         self.dyn_sys = DynamicalSystem(f_sym=ff, a=a, b=b, xa=xa, xb=xb, ua=ua, ub=ub)
@@ -108,7 +110,7 @@ class ControlSystem(object):
             The new value
         '''
         
-        if param in {'maxIt', 'eps', 'ierr'}:
+        if param in {'maxIt', 'eps', 'ierr', 'dt_sim'}:
             self._parameters[param] = value
 
         elif param in {'n_parts_x', 'sx', 'n_parts_u', 'su', 'kx', 'use_chains', 'nodes_type', 'use_std_approach'}:
@@ -358,7 +360,7 @@ class ControlSystem(object):
             start.append(start_dict[x])
         
         # create simulation object
-        S = Simulator(ff, T, start, self.eqs.trajectories.u)
+        S = Simulator(ff, T, start, self.eqs.trajectories.u, dt=self._parameters['dt_sim'])
         
         logging.debug("start: %s"%str(start))
         

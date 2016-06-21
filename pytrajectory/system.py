@@ -363,8 +363,13 @@ class ControlSystem(object):
             self.check_accuracy()
 
             # any of the follwing  conditions ends the loop
+            slvr = self.eqs.solver
             cond1 = self.reached_accuracy
-            cond2 = not self.eqs.solver.max_LM_it_reached
+            
+            # following means: solver stopped not
+            # only because of maximum stepp             # number
+            cond2 = (not slvr.cond_num_steps) or slvr.cond_abs_tol \
+                                              or slvr.cond_rel_tol
             cond3 = self.eqs.solver.solve_count >= self._parameters['accIt']
 
             if cond1 or cond2 or cond3:

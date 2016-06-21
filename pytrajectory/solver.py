@@ -103,7 +103,9 @@ class Solver:
         # measure the time for the LM-Algorithm
         T_start = time.time()
         
-        while((self.res > self.tol) and (self.maxIt > i) and (abs(self.res-self.res_old) > reltol)):
+        break_outer_loop = False
+        
+        while (not break_outer_loop):
             i += 1
             
             #if (i-1)%4 == 0:
@@ -181,15 +183,26 @@ class Solver:
                 logging.warn("res_old > res  (should not happen)")
 
             logging.debug("nIt= %d    res= %f"%(i,self.res))
+            
+            self.cond_abs_tol = self.res <= self.tol
+            self.cond_rel_tol = abs(self.res-self.res_old) <= reltol
+            self.cond_num_steps = i >= self.maxIt
+            
+            break_outer_loop = self.cond_abs_tol or self.cond_rel_tol \
+                                                 or self.cond_num_steps
 
         # LM Algorithm finished
         T_LM = time.time() - T_start
         
+        if i == 0:
+            from IPython import embed as IPS
+            IPS()
+        
         self.avg_LM_time = T_LM / i
         
-        # if this flag is set, the LM-Algorithm was stopped due to
-        # maximum number of iterations
+        # Note: if self.cond_num_steps == True, the LM-Algorithm was stopped
+        # due to maximum number of iterations
         # -> it might be worth to continue 
-        self.max_LM_it_reached = i >= self.maxIt
+        
         
         self.sol = x

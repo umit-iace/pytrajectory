@@ -265,8 +265,12 @@ class ControlSystem(object):
         
         # do the first iteration step
         logging.info("1st Iteration: {} spline parts".format(self.eqs.trajectories.n_parts_x))
-        self._iterate()
-        
+        try:        
+            self._iterate()
+        except auxiliary.NanError:
+            logging.warn("NanError")
+            return None, None
+
         # this was the first iteration
         # now we are getting into the loop
         self.nIt = 1
@@ -284,8 +288,12 @@ class ControlSystem(object):
                 logging.info("{}th Iteration: {} spline parts".format(self.nIt+1, self.eqs.trajectories.n_parts_x))
 
             # start next iteration step
-            self._iterate()
-
+            try:        
+                self._iterate()
+            except auxiliary.NanError:
+                logging.warn("NanError")
+                return None, None
+            
             # increment iteration number
             self.nIt += 1
 

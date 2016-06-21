@@ -3,6 +3,8 @@ from numpy.linalg import solve, norm
 import scipy as scp
 import time
 
+from auxiliary import NanError
+
 from log import logging
 
 
@@ -120,6 +122,11 @@ class Solver:
                 
                 Fxs = self.F(xs)
 
+                if any(np.isnan(Fxs)):
+                    # this might be caused by too small mu
+                    msg = "Invalid start guess (leads to nan)"
+                    raise NanError(msg)
+
                 normFx = norm(Fx)
                 normFxs = norm(Fxs)
 
@@ -148,7 +155,13 @@ class Solver:
                 # -> if b0 < rho < b1 : leave mu unchanged
                 
                 logging.debug("  rho= %f    mu= %f"%(rho, self.mu))
-                
+
+                if np.isnan(rho):
+                    # this should might be caused by large values for xs
+                    # but it should have been catched above
+                    logging.warn("rho = nan (should not happen)")
+                    raise NanError()
+               
                 if rho < 0:
                     logging.warn("rho < 0 (should not happen)")
                 

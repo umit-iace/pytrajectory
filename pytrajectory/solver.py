@@ -85,7 +85,7 @@ class Solver:
         b0 = 0.2
         b1 = 0.8
 
-        roh = 0.0
+        rho = 0.0
 
         reltol = self.reltol
         
@@ -121,7 +121,7 @@ class Solver:
                 
                 R1 = (normFx - normFxs)
                 R2 = (normFx - (norm(Fx+DFx.dot(s))))
-                roh = R1 / R2
+                rho = R1 / R2
                 
                 # note smaller bigger mu means less progress but
                 # "more regular" conditions
@@ -129,30 +129,30 @@ class Solver:
                 if R1 < 0 or R2 < 0:
                     # the step was too big -> residuum would be increasing
                     mu*= 2
-                    roh = 0.0 # ensure another iteration
+                    rho = 0.0 # ensure another iteration
                     
                     #logging.debug("increasing res. R1=%f, R2=%f, dismiss solution" % (R1, R2))
 
-                elif (roh<=b0):
+                elif (rho<=b0):
                     mu = 2*mu
-                elif (roh>=b1):
+                elif (rho>=b1):
                     
                     mu = 0.5*mu
 
-                # -> if b0 < roh < b1 : leave mu unchanged
+                # -> if b0 < rho < b1 : leave mu unchanged
                 
-                logging.debug("  roh= %f    mu= %f"%(roh,mu))
+                logging.debug("  rho= %f    mu= %f"%(rho, mu))
                 
-                if roh < 0:
-                    logging.warn("roh < 0 (should not happen)")
+                if rho < 0:
+                    logging.warn("rho < 0 (should not happen)")
                 
                 # if the system more or less behaves linearly 
-                break_inner_loop = roh > b0
+                break_inner_loop = rho > b0
             
             Fx = Fxs
             x = xs
             
-            #roh = 0.0
+            #rho = 0.0
             res_alt = res
             res = normFx
             if i>1 and res > res_alt:

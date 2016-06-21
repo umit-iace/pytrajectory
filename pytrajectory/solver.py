@@ -34,7 +34,8 @@ class Solver:
         The solver to use
     '''
     
-    def __init__(self, F, DF, x0, tol=1e-5, reltol=2e-5, maxIt=100, method='leven'):
+    def __init__(self, F, DF, x0, tol=1e-5, reltol=2e-5, maxIt=50,
+                                            method='leven', mu=1e-4):
         self.F = F
         self.DF = DF
         self.x0 = x0
@@ -42,6 +43,13 @@ class Solver:
         self.reltol = reltol
         self.maxIt = maxIt
         self.method = method
+        
+        self.solve_count = 0
+        
+        # this is LM specific
+        self.mu=mu
+        self.res = 1
+        self.res_old = -1
         
         self.sol = None
     
@@ -52,6 +60,8 @@ class Solver:
         collocation equation system.
         '''
         
+        self.solve_count += 1
+
         if (self.method == 'leven'):
             logging.debug("Run Levenberg-Marquardt method")
             self.leven()
@@ -72,14 +82,11 @@ class Solver:
         '''
         i = 0
         x = self.x0
-        res = 1
-        res_alt = -1
         
         eye = scp.sparse.identity(len(self.x0))
 
         #mu = 1.0
-        mu = 1e-4
-        mu_old = mu
+        self.mu = 1e-4
         
         # borders for convergence-control
         b0 = 0.2
@@ -94,7 +101,7 @@ class Solver:
         # measure the time for the LM-Algorithm
         T_start = time.time()
         
-        while((res > self.tol) and (self.maxIt > i) and (abs(res-res_alt) > reltol)):
+        while((self.res > self.tol) and (self.maxIt > i) and (abs(self.res-self.res_old) > reltol)):
             i += 1
             
             #if (i-1)%4 == 0:
@@ -103,7 +110,7 @@ class Solver:
             
             break_inner_loop = False
             while (not break_inner_loop):                
-                A = DFx.T.dot(DFx) + mu**2*eye
+                A = DFx.T.dot(DFx) + self.mu**2*eye
 
                 b = DFx.T.dot(Fx)
                     
@@ -128,20 +135,19 @@ class Solver:
                 
                 if R1 < 0 or R2 < 0:
                     # the step was too big -> residuum would be increasing
-                    mu*= 2
+                    self.mu *= 2
                     rho = 0.0 # ensure another iteration
                     
                     #logging.debug("increasing res. R1=%f, R2=%f, dismiss solution" % (R1, R2))
 
                 elif (rho<=b0):
-                    mu = 2*mu
+                    self.mu *= 2
                 elif (rho>=b1):
-                    
-                    mu = 0.5*mu
+                    self.mu *= 0.5
 
                 # -> if b0 < rho < b1 : leave mu unchanged
                 
-                logging.debug("  rho= %f    mu= %f"%(rho, mu))
+                logging.debug("  rho= %f    mu= %f"%(rho, self.mu))
                 
                 if rho < 0:
                     logging.warn("rho < 0 (should not happen)")
@@ -152,16 +158,25 @@ class Solver:
             Fx = Fxs
             x = xs
             
+            # store for possible future usage
+            self.x0 = xs
+            
             #rho = 0.0
-            res_alt = res
-            res = normFx
-            if i>1 and res > res_alt:
+            self.res_old = self.res
+            self.res = normFx
+            if i>1 and self.res > self.res_old:
                 logging.warn("res_old > res  (should not happen)")
 
-            logging.debug("nIt= %d    res= %f"%(i,res))
+            logging.debug("nIt= %d    res= %f"%(i,self.res))
 
         # LM Algorithm finished
         T_LM = time.time() - T_start
+        
         self.avg_LM_time = T_LM / i
+        
+        # if this flag is set, the LM-Algorithm was stopped due to
+        # maximum number of iterations
+        # -> it might be worth to continue 
+        self.max_LM_it_reached = i >= self.maxIt
         
         self.sol = x

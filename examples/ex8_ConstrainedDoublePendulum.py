@@ -254,6 +254,14 @@ def draw(xt, image):
     return image
 
 if not 'no-pickle' in sys.argv:
+    t = np.linspace(a, b, int(1e5))
+    uu = list()
+    for _t in t:
+        uu.append(u(_t))
+    dump_obj = np.hstack(((np.reshape(t, (len(t), 1)), np.array(uu))))
+    with open("ex8_ConstrainedDoublePendulum.pkl", "w") as file:
+        import pickle
+        pickle.dump(dump_obj, file)
     # here we save the simulation results so we don't have to run
     # the iteration again in case the following fails
     S.save(fname='ex8_ConstrainedDoublePendulum.pcl')
